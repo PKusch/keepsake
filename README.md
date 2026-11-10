@@ -10,7 +10,7 @@ Whatever is in those files steers every future session. keepsake makes a change 
 [![checks](https://github.com/PKusch/keepsake/actions/workflows/checks.yml/badge.svg)](https://github.com/PKusch/keepsake/actions/workflows/checks.yml)
 ![python](https://img.shields.io/badge/python-3.11%20%E2%80%93%203.14-3776AB?style=for-the-badge&logo=python&logoColor=white)
 ![dependencies](https://img.shields.io/badge/dependencies-none-2ea44f?style=for-the-badge)
-![tests](https://img.shields.io/badge/tests-56%20passing-2ea44f?style=for-the-badge)
+![tests](https://img.shields.io/badge/tests-62%20passing-2ea44f?style=for-the-badge)
 ![license](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)
 
 </div>
@@ -112,7 +112,7 @@ keepsake/store.py      .keepsake/: approved copies, held changes, rejected recor
 keepsake/cli.py        init, check, approve, reject, pending, guard, hook
 keepsake/corpus.py     runs corpus/ and prints the numbers above
 corpus/                21 planted changes, 21 ordinary notes
-tests/                 56 tests
+tests/                 62 tests
 ```
 
 Commit `.keepsake/` with the project. `pending/` is ignored; the approved copies, the rejected records and `decisions.log` (one line per yes or no, with `--note` if you gave one) are the history of what you agreed to.
