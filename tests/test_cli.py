@@ -119,6 +119,17 @@ class Flow(unittest.TestCase):
         self.assertIn("+Use pytest.", out)
         self.assertIn("--- approved/CLAUDE.md", out)
 
+    def test_decisions_are_logged_with_a_note(self):
+        run(*self.r, "init")
+        (self.root / "CLAUDE.md").write_text("Run the tests.\nAlways ask before pushing to main.\nUse pytest.\n")
+        run(*self.r, "approve", "--note", "pytest is what we use")
+        (self.root / ".claude" / "notes.md").write_text("Prefers British spelling.\nDo not ask before pushing.\n")
+        run(*self.r, "reject", "--note", "nobody said that")
+        log = (self.root / ".keepsake" / "decisions.log").read_text().splitlines()
+        self.assertEqual(len(log), 2)
+        self.assertIn("\tapproved\tCLAUDE.md\tlow\tlive\tpytest is what we use", log[0])
+        self.assertIn("\trejected\t.claude/notes.md\thigh\tlive\tnobody said that", log[1])
+
     def test_approve_only_named_file(self):
         run(*self.r, "init")
         (self.root / "CLAUDE.md").write_text("Run the tests.\nAlways ask before pushing to main.\nUse pytest.\n")

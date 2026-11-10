@@ -113,7 +113,7 @@ corpus/                20 planted changes, 20 ordinary notes
 tests/                 47 tests
 ```
 
-Commit `.keepsake/` with the project. `pending/` is ignored; the approved copies and the rejected records are the history of what you said yes and no to.
+Commit `.keepsake/` with the project. `pending/` is ignored; the approved copies, the rejected records and `decisions.log` (one line per yes or no, with `--note` if you gave one) are the history of what you agreed to.
 
 ## Licence
 

@@ -72,7 +72,7 @@ def cmd_check(args) -> int:
 def cmd_approve(args) -> int:
     store = _store_or_fail(args)
     if args.pending:
-        return _approve_pending(store, args.pending, args.yes)
+        return _approve_pending(store, args.pending, args.yes, args.note or "")
     report = check(store)
     targets = report.changed
     if args.paths:
@@ -97,10 +97,11 @@ def cmd_approve(args) -> int:
         else:
             store.approve(f.path, f.live or "")
             print(f"approved: {f.path} ({f.severity})")
+        store.log_approval(f.path, f.severity, args.note or "")
     return EXIT_CLEAN
 
 
-def _approve_pending(store: Store, pid: str, yes: bool) -> int:
+def _approve_pending(store: Store, pid: str, yes: bool, note: str = "") -> int:
     item = next((p for p in store.pending() if p.id == pid), None)
     if item is None:
         print(f"keepsake: no held change with id {pid}.", file=sys.stderr)
@@ -116,6 +117,7 @@ def _approve_pending(store: Store, pid: str, yes: bool) -> int:
     target.write_text(item.content, "utf-8")
     store.approve(item.path, item.content)
     store.drop_pending(pid)
+    store.log_approval(item.path, item.severity, note or "", source=f"held:{pid}")
     print(f"approved: {item.path} ({item.severity}) written and recorded")
     return EXIT_CLEAN
 
@@ -129,6 +131,7 @@ def cmd_reject(args) -> int:
             return EXIT_ERROR
         record = store.record_rejection(item.path, f"held change {item.id} for {item.path}\n\n{item.content}")
         store.drop_pending(item.id)
+        store.log_rejection(item.path, item.severity, args.note or "", source=f"held:{item.id}")
         print(f"rejected: {item.path}; kept a record at {display_path(record, store.root)}")
         return EXIT_CLEAN
     report = check(store)
@@ -141,6 +144,7 @@ def cmd_reject(args) -> int:
         return EXIT_CLEAN
     for f in targets:
         record = store.record_rejection(f.path, f.diff_text())
+        store.log_rejection(f.path, f.severity, args.note or "")
         target = _key_to_path(store, f.path)
         if f.approved is None:
             if target.is_file():
@@ -301,11 +305,13 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("paths", nargs="*", help="only these files (as shown by check)")
     s.add_argument("--pending", metavar="ID", help="apply and approve a held change")
     s.add_argument("--yes", action="store_true", help="needed for a high or critical change")
+    s.add_argument("--note", help="why, kept in .keepsake/decisions.log")
     s.set_defaults(func=cmd_approve)
 
     s = sub.add_parser("reject", help="put the approved version back")
     s.add_argument("paths", nargs="*")
     s.add_argument("--pending", metavar="ID", help="discard a held change")
+    s.add_argument("--note", help="why, kept in .keepsake/decisions.log")
     s.set_defaults(func=cmd_reject)
 
     s = sub.add_parser("status", help="one line: ok, or how many files changed and how loudly")

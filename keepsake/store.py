@@ -146,6 +146,19 @@ class Store:
         if path.is_file():
             path.unlink()
 
+    # ---- approvals log ---------------------------------------------------
+
+    def log_approval(self, key: str, severity: str, note: str = "", source: str = "live") -> None:
+        """One line per decision, so the history of yes and no can be read back."""
+        line = f"{_now()}\tapproved\t{key}\t{severity}\t{source}\t{note}\n"
+        with (self.dir / "decisions.log").open("a", encoding="utf-8") as fh:
+            fh.write(line)
+
+    def log_rejection(self, key: str, severity: str, note: str = "", source: str = "live") -> None:
+        line = f"{_now()}\trejected\t{key}\t{severity}\t{source}\t{note}\n"
+        with (self.dir / "decisions.log").open("a", encoding="utf-8") as fh:
+            fh.write(line)
+
     # ---- rejected --------------------------------------------------------
 
     def record_rejection(self, key: str, diff_text: str) -> Path:
