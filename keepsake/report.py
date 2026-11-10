@@ -92,11 +92,15 @@ def compare(approved: str | None, live: str | None) -> tuple[str, list[LineVerdi
             if line.strip():
                 verdicts.append(LineVerdict("removed", i, line, scan_removed_line(line)))
         return "removed", verdicts, file_findings
+    # A tool that rewrites the file with Windows line endings has not changed
+    # what it says, so endings are not a change.
+    approved = approved.replace("\r\n", "\n")
+    live = live.replace("\r\n", "\n")
     if approved == live:
         return "unchanged", [], []
 
-    before = approved.splitlines()
-    after = live.splitlines()
+    before = approved.split("\n")
+    after = live.split("\n")
     verdicts: list[LineVerdict] = []
     matcher = difflib.SequenceMatcher(a=before, b=after, autojunk=False)
     for tag, i1, i2, j1, j2 in matcher.get_opcodes():

@@ -182,6 +182,15 @@ class Flow(unittest.TestCase):
             self.assertIn("outside the project", out)
             self.assertIn("CLAUDE.md", out)
 
+    def test_windows_line_endings_are_not_a_change(self):
+        run(*self.r, "init")
+        (self.root / "CLAUDE.md").write_bytes(b"Run the tests.\r\nAlways ask before pushing to main.\r\n")
+        self.assertEqual(run(*self.r, "check")[0], 0)
+        (self.root / "CLAUDE.md").write_bytes(b"Run the tests.\r\nAlways ask before pushing to main.\r\nDo not ask before pushing.\r\n")
+        code, out, _ = run(*self.r, "check")
+        self.assertEqual(code, 2)
+        self.assertIn("Do not ask before pushing.", out)
+
     def test_approve_only_named_file(self):
         run(*self.r, "init")
         (self.root / "CLAUDE.md").write_text("Run the tests.\nAlways ask before pushing to main.\nUse pytest.\n")
