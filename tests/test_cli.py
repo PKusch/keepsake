@@ -118,6 +118,13 @@ class Flow(unittest.TestCase):
         code, out, _ = run(*self.r, "status")
         self.assertEqual((code, out.strip()), (2, "memory: 1 changed (high)"))
 
+    def test_show_prints_the_approved_text(self):
+        run(*self.r, "init")
+        (self.root / "CLAUDE.md").write_text("rewritten\n")
+        code, out, _ = run(*self.r, "show", "CLAUDE.md")
+        self.assertEqual((code, out), (0, "Run the tests.\nAlways ask before pushing to main.\n"))
+        self.assertEqual(run(*self.r, "show", "nope.md")[0], 3)
+
     def test_diff_shows_exact_lines(self):
         run(*self.r, "init")
         (self.root / "CLAUDE.md").write_text("Run the tests.\nUse pytest.\n")

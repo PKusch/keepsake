@@ -192,6 +192,17 @@ def cmd_status(args) -> int:
     return EXIT_LOUD if rank(report.severity) >= rank(LOUD) else EXIT_CHANGED
 
 
+def cmd_show(args) -> int:
+    """Print the approved version of one memory file."""
+    store = _store_or_fail(args)
+    index = store.index()
+    if args.path not in index:
+        print(f"keepsake: {args.path} has no approved version.", file=sys.stderr)
+        return EXIT_ERROR
+    print(store.approved_content(index[args.path]) or "", end="")
+    return EXIT_CLEAN
+
+
 def cmd_diff(args) -> int:
     """The exact lines, for when the plain-words report is not enough."""
     store = _store_or_fail(args)
@@ -341,6 +352,10 @@ def build_parser() -> argparse.ArgumentParser:
 
     s = sub.add_parser("status", help="one line: ok, or how many files changed and how loudly")
     s.set_defaults(func=cmd_status)
+
+    s = sub.add_parser("show", help="print the approved version of one memory file")
+    s.add_argument("path", help="as shown by check")
+    s.set_defaults(func=cmd_show)
 
     s = sub.add_parser("diff", help="show the exact changed lines, as a diff")
     s.add_argument("paths", nargs="*")
