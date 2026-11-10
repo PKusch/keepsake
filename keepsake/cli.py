@@ -240,7 +240,7 @@ def cmd_diff(args) -> int:
 
 def cmd_pending(args) -> int:
     store = _store_or_fail(args)
-    items = store.pending()
+    items = sorted(store.pending(), key=lambda p: (-rank(p.severity), p.held_at))
     if not items:
         print("keepsake: no held changes.")
         return EXIT_CLEAN
