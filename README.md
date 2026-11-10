@@ -62,6 +62,7 @@ keepsake approve         # record the current content as approved (loud changes 
 keepsake reject          # put the approved version back, keep a record of what was turned down
 keepsake diff            # the exact changed lines, when the plain words are not enough
 keepsake show CLAUDE.md  # the approved version of one file
+keepsake history         # every yes and no so far
 keepsake status          # one line for a shell prompt: "memory: ok" or "memory: 1 changed (high)"
 keepsake init --home     # also watch ~/.claude/CLAUDE.md and the per-project memory under ~/.claude
 ```

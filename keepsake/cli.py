@@ -192,6 +192,23 @@ def cmd_status(args) -> int:
     return EXIT_LOUD if rank(report.severity) >= rank(LOUD) else EXIT_CHANGED
 
 
+def cmd_history(args) -> int:
+    """Every yes and no so far, newest last."""
+    store = _store_or_fail(args)
+    log = store.dir / "decisions.log"
+    if not log.is_file():
+        print("keepsake: no decisions yet.")
+        return EXIT_CLEAN
+    for line in log.read_text("utf-8", errors="replace").splitlines():
+        parts = line.split("\t")
+        if len(parts) < 5:
+            continue
+        when, what, key, severity, source = parts[:5]
+        note = parts[5] if len(parts) > 5 and parts[5] else ""
+        print(f"{when}  {what:<8} {key}  ({severity})" + (f"  {note}" if note else ""))
+    return EXIT_CLEAN
+
+
 def cmd_show(args) -> int:
     """Print the approved version of one memory file."""
     store = _store_or_fail(args)
@@ -352,6 +369,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     s = sub.add_parser("status", help="one line: ok, or how many files changed and how loudly")
     s.set_defaults(func=cmd_status)
+
+    s = sub.add_parser("history", help="every approve and reject so far")
+    s.set_defaults(func=cmd_history)
 
     s = sub.add_parser("show", help="print the approved version of one memory file")
     s.add_argument("path", help="as shown by check")

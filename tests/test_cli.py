@@ -144,6 +144,11 @@ class Flow(unittest.TestCase):
         self.assertEqual(len(log), 2)
         self.assertIn("\tapproved\tCLAUDE.md\tlow\tlive\tpytest is what we use", log[0])
         self.assertIn("\trejected\t.claude/notes.md\thigh\tlive\tnobody said that", log[1])
+        _, out, _ = run(*self.r, "history")
+        lines = out.strip().splitlines()
+        self.assertEqual(len(lines), 2)
+        self.assertIn("approved CLAUDE.md  (low)  pytest is what we use", lines[0])
+        self.assertIn("rejected .claude/notes.md  (high)  nobody said that", lines[1])
 
     def test_big_quiet_rewrite_is_collapsed_but_the_loud_line_shows(self):
         run(*self.r, "init")
