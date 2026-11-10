@@ -121,7 +121,7 @@ def check(store: Store) -> Report:
     files = []
     for key in keys:
         approved = store.approved_content(index[key]) if key in index else None
-        live = live_by_key[key].read_text("utf-8") if key in live_by_key else None
+        live = live_by_key[key].read_text("utf-8", errors="replace") if key in live_by_key else None
         status, verdicts, file_findings = compare(approved, live)
         files.append(FileReport(key, status, verdicts, file_findings, live, approved))
     return Report(files)
@@ -136,7 +136,7 @@ def check_one(store: Store, path: Path) -> FileReport | None:
     key = display_path(path, store.root)
     index = store.index()
     approved = store.approved_content(index[key]) if key in index else None
-    live = path.read_text("utf-8") if path.is_file() else None
+    live = path.read_text("utf-8", errors="replace") if path.is_file() else None
     status, verdicts, file_findings = compare(approved, live)
     return FileReport(key, status, verdicts, file_findings, live, approved)
 

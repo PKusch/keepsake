@@ -142,6 +142,13 @@ class Flow(unittest.TestCase):
         _, out, _ = run(*self.r, "check", "--all")
         self.assertIn("Note number 29.", out)
 
+    def test_odd_bytes_in_memory_do_not_crash_the_check(self):
+        run(*self.r, "init")
+        (self.root / "CLAUDE.md").write_bytes(b"Run the tests.\nAlways ask before pushing to main.\n\xff\xfe not utf-8\n")
+        code, out, _ = run(*self.r, "check")
+        self.assertEqual(code, 1)
+        self.assertIn("not utf-8", out)
+
     def test_approve_only_named_file(self):
         run(*self.r, "init")
         (self.root / "CLAUDE.md").write_text("Run the tests.\nAlways ask before pushing to main.\nUse pytest.\n")

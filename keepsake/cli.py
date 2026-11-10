@@ -46,7 +46,7 @@ def cmd_init(args) -> int:
     files = {}
     for path in discover(root, store.include()):
         key = display_path(path, root)
-        files[key] = store.approve(key, path.read_text("utf-8"))
+        files[key] = store.approve(key, path.read_text("utf-8", errors="replace"))
     store.write_index(files)
     print(f"keepsake: approved {len(files)} memory file{'s' if len(files) != 1 else ''} as they are now.")
     for key in sorted(files):
