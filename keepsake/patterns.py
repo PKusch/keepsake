@@ -88,13 +88,21 @@ def pattern_base(pattern: str) -> Path:
     return Path(*base) if base else Path(".")
 
 
+def canonical(path: Path) -> Path:
+    """Resolve the folder, keep the file name: links in the file are kept visible."""
+    path = Path(os.path.abspath(path))
+    return Path(os.path.realpath(path.parent)) / path.name
+
+
 def matches(path: Path, pattern: str, root: Path) -> bool:
     """True when `path` is named by `pattern` (relative to `root` unless absolute)."""
     regex = glob_to_regex(expand(pattern))
     if is_absolute_pattern(pattern):
         return bool(regex.match(path.as_posix()))
+    # The file itself is not resolved: a memory file that is a link must
+    # still be found under its own name, and then reported as a link.
     try:
-        rel = path.resolve().relative_to(root.resolve())
+        rel = canonical(path).relative_to(root.resolve())
     except ValueError:
         return False
     return bool(regex.match(rel.as_posix()))
@@ -107,7 +115,7 @@ def discover(root: Path, include: list[str]) -> list[Path]:
         base = pattern_base(pattern) if is_absolute_pattern(pattern) else root / pattern_base(pattern)
         if base.is_file():
             if matches(base, pattern, root):
-                found.add(base.resolve())
+                found.add(canonical(base))
             continue
         if not base.is_dir():
             continue
@@ -116,17 +124,18 @@ def discover(root: Path, include: list[str]) -> list[Path]:
             for name in filenames:
                 candidate = Path(dirpath) / name
                 if matches(candidate, pattern, root):
-                    found.add(candidate.resolve())
+                    found.add(canonical(candidate))
     return sorted(found)
 
 
 def display_path(path: Path, root: Path) -> str:
     """Relative inside the project, `~`-shortened outside it."""
+    absolute = canonical(path)
     try:
-        return path.resolve().relative_to(root.resolve()).as_posix()
+        return absolute.relative_to(root.resolve()).as_posix()
     except ValueError:
         home = Path.home().resolve()
         try:
-            return "~/" + path.resolve().relative_to(home).as_posix()
+            return "~/" + absolute.relative_to(home).as_posix()
         except ValueError:
             return path.as_posix()

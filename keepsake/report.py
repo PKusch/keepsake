@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import difflib
+import os
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -123,8 +124,25 @@ def check(store: Store) -> Report:
         approved = store.approved_content(index[key]) if key in index else None
         live = live_by_key[key].read_text("utf-8", errors="replace") if key in live_by_key else None
         status, verdicts, file_findings = compare(approved, live)
+        if key in live_by_key:
+            file_findings = file_findings + link_findings(live_by_key[key], store.root)
+            if status == "unchanged" and file_findings:
+                status = "changed"
         files.append(FileReport(key, status, verdicts, file_findings, live, approved))
     return Report(files)
+
+
+def link_findings(path: Path, root: Path) -> list[Finding]:
+    """A memory file that is really a link reads from wherever the link points."""
+    if not path.is_symlink():
+        return []
+    target = Path(os.path.realpath(path))
+    try:
+        target.relative_to(root.resolve())
+        return [Finding("link", "moderate", f"this memory file is a link to {target}", str(target))]
+    except ValueError:
+        return [Finding("link_outside", "high",
+                        f"this memory file is a link to {target}, outside the project", str(target))]
 
 
 def check_one(store: Store, path: Path) -> FileReport | None:
@@ -138,6 +156,9 @@ def check_one(store: Store, path: Path) -> FileReport | None:
     approved = store.approved_content(index[key]) if key in index else None
     live = path.read_text("utf-8", errors="replace") if path.is_file() else None
     status, verdicts, file_findings = compare(approved, live)
+    file_findings = file_findings + link_findings(path, store.root)
+    if status == "unchanged" and file_findings:
+        status = "changed"
     return FileReport(key, status, verdicts, file_findings, live, approved)
 
 
