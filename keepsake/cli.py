@@ -63,7 +63,7 @@ def cmd_check(args) -> int:
     if args.json:
         print(json.dumps(to_json(report), indent=2))
     else:
-        print(render(report, pending_count=len(store.pending())))
+        print(render(report, pending_count=len(store.pending()), show_all=args.all))
     if not report.changed:
         return EXIT_CLEAN
     return EXIT_LOUD if rank(report.severity) >= rank(LOUD) else EXIT_CHANGED
@@ -299,6 +299,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     s = sub.add_parser("check", help="show what changed since you last approved")
     s.add_argument("--json", action="store_true")
+    s.add_argument("--all", action="store_true", help="list every changed line, not just the ones with findings")
     s.set_defaults(func=cmd_check)
 
     s = sub.add_parser("approve", help="record the current content as approved")

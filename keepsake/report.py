@@ -150,7 +150,10 @@ def _quote(text: str) -> str:
     return '"' + text.replace('"', "'") + '"'
 
 
-def render_file(f: FileReport) -> list[str]:
+QUIET_LIMIT = 6
+
+
+def render_file(f: FileReport, show_all: bool = False) -> list[str]:
     out = []
     if f.status == "new":
         head = f"{f.path}  new file, {f.added} lines"
@@ -161,16 +164,27 @@ def render_file(f: FileReport) -> list[str]:
     out.append(f"{head}  severity: {f.severity}")
     for ff in f.file_findings:
         out.append(f"  * {ff.meaning}")
-    # Show the loudest lines first, quiet ones after.
-    for v in sorted(f.lines, key=lambda v: -rank(v.severity)):
+    # Show the loudest lines first, quiet ones after. Past a handful, lines
+    # with nothing found are counted rather than listed, so a big rewrite
+    # does not bury the one line that matters.
+    ordered = sorted(f.lines, key=lambda v: -rank(v.severity))
+    shown = 0
+    hidden = 0
+    for v in ordered:
+        if v.severity == "none" and shown >= QUIET_LIMIT and not show_all:
+            hidden += 1
+            continue
         label = "Added" if v.kind == "added" else "Removed"
         out.append(f"  {label}: {_quote(v.text)}")
         for finding in v.findings:
             out.append(f"    * {finding.meaning}")
+        shown += 1
+    if hidden:
+        out.append(f"  ... and {hidden} more line{'s' if hidden != 1 else ''} with nothing found (keepsake diff shows them)")
     return out
 
 
-def render(report: Report, *, pending_count: int = 0) -> str:
+def render(report: Report, *, pending_count: int = 0, show_all: bool = False) -> str:
     changed = report.changed
     lines = []
     if not changed:
@@ -180,7 +194,7 @@ def render(report: Report, *, pending_count: int = 0) -> str:
         lines.append(f"keepsake: {n} memory file{'s' if n != 1 else ''} changed since you last approved them.")
         lines.append("")
         for f in sorted(changed, key=lambda f: -rank(f.severity)):
-            lines.extend(render_file(f))
+            lines.extend(render_file(f, show_all))
             lines.append("")
         lines.append("Nothing takes effect as approved memory until you run: keepsake approve")
         lines.append("To put the approved version back: keepsake reject")
