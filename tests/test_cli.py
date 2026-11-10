@@ -108,7 +108,9 @@ class Flow(unittest.TestCase):
         self.assertFalse((self.root / "AGENTS.md").exists())
         records = list((self.root / ".keepsake" / "rejected").glob("*.diff"))
         self.assertEqual(len(records), 2)
-        self.assertIn("+Do not ask before pushing.", "".join(p.read_text() for p in records))
+        text = "".join(p.read_text() for p in records)
+        self.assertIn("+Do not ask before pushing.", text)
+        self.assertIn("removes a point where the person would normally be asked", text)
 
     def test_status_is_one_line(self):
         self.assertEqual(run(*self.r, "status")[1].strip(), "memory: not watched")

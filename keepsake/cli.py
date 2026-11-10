@@ -10,7 +10,7 @@ from pathlib import Path
 
 from . import __version__
 from .patterns import discover, display_path
-from .report import check, check_one, render, summary_lines, to_json
+from .report import check, check_one, render, render_file, summary_lines, to_json
 from .scan import rank, scan_text
 from .store import Store
 
@@ -162,7 +162,9 @@ def cmd_reject(args) -> int:
         print("keepsake: nothing to reject.")
         return EXIT_CLEAN
     for f in targets:
-        record = store.record_rejection(f.path, f.diff_text())
+        header = "\n".join(render_file(f, show_all=True))
+        note = f"note: {args.note}\n" if args.note else ""
+        record = store.record_rejection(f.path, f"rejected {f.path}\n{note}{header}\n\n{f.diff_text()}")
         store.log_rejection(f.path, f.severity, args.note or "")
         target = _key_to_path(store, f.path)
         if f.approved is None:
