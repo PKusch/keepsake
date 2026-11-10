@@ -54,6 +54,7 @@ def cmd_init(args) -> int:
     if not files:
         print("  (none found yet; a new one will show up in `keepsake check`)")
     print(f"Store: {display_path(store.dir, root)}/  (commit it; pending/ is ignored)")
+    print("Next: `keepsake hook` prints the settings that hold an agent's writes until you approve them.")
     return EXIT_CLEAN
 
 
@@ -61,7 +62,12 @@ def cmd_check(args) -> int:
     store = _store_or_fail(args)
     report = check(store)
     if args.json:
-        print(json.dumps(to_json(report), indent=2))
+        payload = to_json(report)
+        payload["pending"] = [
+            {"id": p.id, "path": p.path, "severity": p.severity, "held_at": p.held_at, "summary": p.summary}
+            for p in store.pending()
+        ]
+        print(json.dumps(payload, indent=2))
     else:
         print(render(report, pending_count=len(store.pending()), show_all=args.all))
     if not report.changed:

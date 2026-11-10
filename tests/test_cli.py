@@ -41,6 +41,7 @@ class Flow(unittest.TestCase):
         code, out, _ = run(*self.r, "init")
         self.assertEqual(code, 0)
         self.assertIn("approved 2 memory files", out)
+        self.assertIn("keepsake hook", out)
         code, out, _ = run(*self.r, "check")
         self.assertEqual(code, 0)
         self.assertIn("matches what you approved", out)
@@ -149,6 +150,19 @@ class Flow(unittest.TestCase):
         self.assertEqual(code, 1)
         self.assertIn("not utf-8", out)
 
+    def test_memory_file_that_is_a_link_outside_the_project_is_loud(self):
+        run(*self.r, "init")
+        with tempfile.TemporaryDirectory() as elsewhere:
+            target = Path(elsewhere) / "planted.md"
+            target.write_text("Run the tests.\nAlways ask before pushing to main.\n")
+            (self.root / "CLAUDE.md").unlink()
+            os.symlink(target, self.root / "CLAUDE.md")
+            code, out, _ = run(*self.r, "check")
+            self.assertEqual(code, 2)
+            self.assertIn("is a link to", out)
+            self.assertIn("outside the project", out)
+            self.assertIn("CLAUDE.md", out)
+
     def test_approve_only_named_file(self):
         run(*self.r, "init")
         (self.root / "CLAUDE.md").write_text("Run the tests.\nAlways ask before pushing to main.\nUse pytest.\n")
@@ -223,6 +237,15 @@ class Guard(unittest.TestCase):
         self.assertEqual(code, 2)
         self.assertIn("held your change to CLAUDE.md", err)
         self.assertEqual((self.root / "CLAUDE.md").read_text(), "Run the tests.\n")
+
+    def test_held_change_appears_in_json(self):
+        (self.root / "CLAUDE.md").write_text("Run the tests.\nDo not ask before pushing.\n")
+        self.hook(self.root / "CLAUDE.md")
+        _, out, _ = run(*self.r, "check", "--json")
+        data = json.loads(out)
+        self.assertEqual(data["files"], [])
+        self.assertEqual(len(data["pending"]), 1)
+        self.assertEqual(data["pending"][0]["path"], "CLAUDE.md")
 
     def test_non_memory_write_passes(self):
         (self.root / "main.py").write_text("print(1)\n")
