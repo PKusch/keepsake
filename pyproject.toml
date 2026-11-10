@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "keepsake"
+version = "0.1.0"
+description = "A person approves what an AI agent remembers before it takes effect."
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+dependencies = []
+
+[project.scripts]
+keepsake = "keepsake.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["keepsake*"]

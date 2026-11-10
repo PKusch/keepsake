@@ -1,0 +1,132 @@
+"""Which files count as an agent's memory, and how to match them."""
+
+from __future__ import annotations
+
+import os
+import re
+from pathlib import Path
+
+# Files that coding agents read at the start of every session and write to
+# between sessions. Anything here steers future behaviour, so a change to it
+# is treated like a tool call that needs the person's say-so.
+DEFAULT_INCLUDE = [
+    "**/CLAUDE.md",
+    "**/CLAUDE.local.md",
+    "**/AGENTS.md",
+    "**/GEMINI.md",
+    "**/MEMORY.md",
+    ".cursorrules",
+    ".windsurfrules",
+    ".clinerules",
+    ".github/copilot-instructions.md",
+    ".claude/**/*.md",
+    ".cursor/rules/**",
+    "memory/**/*.md",
+]
+
+# Memory that lives outside any one project and so reaches every project.
+HOME_INCLUDE = [
+    "~/.claude/CLAUDE.md",
+    "~/.claude/projects/*/memory/**/*.md",
+]
+
+EXCLUDE_DIRS = {
+    ".git",
+    ".keepsake",
+    "node_modules",
+    ".venv",
+    "venv",
+    "__pycache__",
+    "dist",
+    "build",
+    ".npm-cache",
+}
+
+_GLOB_CHARS = re.compile(r"[*?\[]")
+
+
+def glob_to_regex(pattern: str) -> re.Pattern[str]:
+    """Translate a glob with ** into a regex over a posix path."""
+    out = []
+    i = 0
+    while i < len(pattern):
+        c = pattern[i]
+        if pattern.startswith("**/", i):
+            out.append("(?:.*/)?")
+            i += 3
+        elif pattern.startswith("**", i):
+            out.append(".*")
+            i += 2
+        elif c == "*":
+            out.append("[^/]*")
+            i += 1
+        elif c == "?":
+            out.append("[^/]")
+            i += 1
+        else:
+            out.append(re.escape(c))
+            i += 1
+    return re.compile("^" + "".join(out) + "$")
+
+
+def expand(pattern: str) -> str:
+    return os.path.expanduser(pattern)
+
+
+def is_absolute_pattern(pattern: str) -> bool:
+    return pattern.startswith("~") or os.path.isabs(pattern)
+
+
+def pattern_base(pattern: str) -> Path:
+    """The deepest directory in a pattern that has no glob characters."""
+    parts = Path(expand(pattern)).parts
+    base: list[str] = []
+    for part in parts:
+        if _GLOB_CHARS.search(part):
+            break
+        base.append(part)
+    return Path(*base) if base else Path(".")
+
+
+def matches(path: Path, pattern: str, root: Path) -> bool:
+    """True when `path` is named by `pattern` (relative to `root` unless absolute)."""
+    regex = glob_to_regex(expand(pattern))
+    if is_absolute_pattern(pattern):
+        return bool(regex.match(path.as_posix()))
+    try:
+        rel = path.resolve().relative_to(root.resolve())
+    except ValueError:
+        return False
+    return bool(regex.match(rel.as_posix()))
+
+
+def discover(root: Path, include: list[str]) -> list[Path]:
+    """Every existing file named by the include patterns, as absolute paths."""
+    found: set[Path] = set()
+    for pattern in include:
+        base = pattern_base(pattern) if is_absolute_pattern(pattern) else root / pattern_base(pattern)
+        if base.is_file():
+            if matches(base, pattern, root):
+                found.add(base.resolve())
+            continue
+        if not base.is_dir():
+            continue
+        for dirpath, dirnames, filenames in os.walk(base):
+            dirnames[:] = [d for d in dirnames if d not in EXCLUDE_DIRS]
+            for name in filenames:
+                candidate = Path(dirpath) / name
+                if matches(candidate, pattern, root):
+                    found.add(candidate.resolve())
+    return sorted(found)
+
+
+def display_path(path: Path, root: Path) -> str:
+    """Relative inside the project, `~`-shortened outside it."""
+    try:
+        return path.resolve().relative_to(root.resolve()).as_posix()
+    except ValueError:
+        home = Path.home().resolve()
+        try:
+            return "~/" + path.resolve().relative_to(home).as_posix()
+        except ValueError:
+            return path.as_posix()

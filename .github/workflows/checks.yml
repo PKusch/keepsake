@@ -1,0 +1,39 @@
+name: checks
+
+# The README quotes how many planted changes the scanner catches and how many
+# benign notes it leaves alone. A number nobody re-runs quietly stops being
+# true. This runs the tests, re-runs the corpus and checks the README quotes
+# the same figures, on every Python keepsake supports.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.11", "3.12", "3.13", "3.14"]
+    name: python ${{ matrix.python }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Tests
+        run: python -m unittest discover -s tests -v
+      - name: Corpus report
+        run: python -m keepsake.corpus
+      - name: README numbers match a fresh run
+        run: python scripts/check_readme_numbers.py
+      - name: Installs and runs as a command
+        run: |
+          pip install .
+          cd "$(mktemp -d)" && printf 'Run the tests.\n' > CLAUDE.md
+          keepsake init
+          keepsake check
+          keepsake hook > /dev/null
