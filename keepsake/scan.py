@@ -295,8 +295,10 @@ def scan_removed_line(text: str) -> list[Finding]:
 
 def scan_text(text: str) -> list[LineVerdict]:
     """Every line of a wholly new memory file, judged as added."""
+    # Split on newlines only: splitlines() would also break on the line
+    # separator character, which is one of the things being looked for.
     verdicts = []
-    for i, line in enumerate(text.splitlines(), start=1):
+    for i, line in enumerate(text.split("\n"), start=1):
         if not line.strip():
             continue
         verdicts.append(LineVerdict("added", i, line, scan_added_line(line)))

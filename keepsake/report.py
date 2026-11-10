@@ -80,7 +80,7 @@ def compare(approved: str | None, live: str | None) -> tuple[str, list[LineVerdi
         file_findings.append(Finding("new_file", "moderate",
                                      "a memory file that was never approved has appeared", ""))
         verdicts = []
-        for i, line in enumerate(live.splitlines(), start=1):  # type: ignore[union-attr]
+        for i, line in enumerate(live.split("\n"), start=1):  # type: ignore[union-attr]
             if line.strip():
                 verdicts.append(LineVerdict("added", i, line, scan_added_line(line)))
         return "new", verdicts, file_findings
@@ -88,7 +88,7 @@ def compare(approved: str | None, live: str | None) -> tuple[str, list[LineVerdi
         file_findings.append(Finding("removed_file", "moderate",
                                      "an approved memory file is gone", ""))
         verdicts = []
-        for i, line in enumerate(approved.splitlines(), start=1):
+        for i, line in enumerate(approved.split("\n"), start=1):
             if line.strip():
                 verdicts.append(LineVerdict("removed", i, line, scan_removed_line(line)))
         return "removed", verdicts, file_findings
