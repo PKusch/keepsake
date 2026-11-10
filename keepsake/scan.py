@@ -117,8 +117,13 @@ SECRET_VALUE = _rx(
     flags=0,
 )
 
+# Zero-width characters, soft hyphens, bidi controls, line and paragraph
+# separators (a second line hiding inside what looks like one), tag characters,
+# and the Hangul fillers that render as nothing. Written as escapes on purpose:
+# this file should not itself contain characters that cannot be seen.
 INVISIBLE = re.compile(
-    "[​-‏⁠-⁤﻿‪-‮⁦-⁩\U000e0000-\U000e007f]"
+    "[\u00ad\u034f\u061c\u115f\u1160\u17b4\u17b5\u180e\u200b-\u200f\u2028\u2029\u202a-\u202e"
+    "\u2060-\u2064\u206a-\u206f\u3164\ufeff\uffa0\U000e0000-\U000e007f]"
 )
 HTML_COMMENT = re.compile(r"<!--(.*?)-->", re.DOTALL)
 ENCODED = re.compile(r"(?<![A-Za-z0-9+/=])[A-Za-z0-9+/]{40,}={0,2}(?![A-Za-z0-9+/=])")
