@@ -11,7 +11,7 @@ from pathlib import Path
 from . import __version__
 from .patterns import discover, display_path
 from .report import check, check_one, render, summary_lines, to_json
-from .scan import rank
+from .scan import rank, scan_text
 from .store import Store
 
 EXIT_CLEAN = 0
@@ -44,13 +44,26 @@ def cmd_init(args) -> int:
     if args.home:
         store.add_home()
     files = {}
+    loud: dict[str, list[str]] = {}
     for path in discover(root, store.include(), store.exclude()):
         key = display_path(path, root)
-        files[key] = store.approve(key, path.read_text("utf-8", errors="replace"))
+        text = path.read_text("utf-8", errors="replace")
+        files[key] = store.approve(key, text)
+        # init approves what is there, but it should not do so silently.
+        reasons = [
+            f"{f.meaning}: {_short(v.text)}"
+            for v in scan_text(text) for f in v.findings if rank(f.severity) >= rank(LOUD)
+        ]
+        if reasons:
+            loud[key] = reasons
     store.write_index(files)
     print(f"keepsake: approved {len(files)} memory file{'s' if len(files) != 1 else ''} as they are now.")
     for key in sorted(files):
         print(f"  {key}")
+        for reason in loud.get(key, []):
+            print(f"    ! already in it: {reason}")
+    if loud:
+        print("Lines marked ! would be loud if an agent added them. Check they are yours.")
     if not files:
         print("  (none found yet; a new one will show up in `keepsake check`)")
     print(f"Store: {display_path(store.dir, root)}/  (commit it; pending/ is ignored)")
@@ -282,6 +295,11 @@ def cmd_hook(args) -> int:
     print(json.dumps(snippet, indent=2))
     print("\nAfter that, every write an agent makes to a memory file is held until you approve it.")
     return EXIT_CLEAN
+
+
+def _short(text: str) -> str:
+    text = text.strip()
+    return '"' + (text[:77] + "..." if len(text) > 80 else text) + '"'
 
 
 def _key_to_path(store: Store, key: str) -> Path:
