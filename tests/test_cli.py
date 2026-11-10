@@ -269,6 +269,7 @@ class Guard(unittest.TestCase):
         code, _, err = self.hook(self.root / "CLAUDE.md")
         self.assertEqual(code, 2)
         self.assertIn("held your change to CLAUDE.md", err)
+        self.assertIn("removes a point where the person would normally be asked", err)
         self.assertEqual((self.root / "CLAUDE.md").read_text(), "Run the tests.\n")
         code, out, _ = run(*self.r, "pending")
         self.assertEqual(code, 0)

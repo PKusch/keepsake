@@ -290,9 +290,11 @@ def cmd_guard(args) -> int:
     if not held:
         return EXIT_CLEAN
     for f, item in held:
+        why = "; ".join(item.summary[:3])
         print(
-            f"keepsake held your change to {f.path} (severity: {f.severity}). "
-            f"It is not in effect: the file still says what the person approved. "
+            f"keepsake held your change to {f.path} (severity: {f.severity}"
+            + (f": {why}" if why else "")
+            + "). It is not in effect: the file still says what the person approved. "
             f"Tell the person it is waiting as held change {item.id} and that `keepsake pending` shows it. "
             f"Do not write it again.",
             file=sys.stderr,
