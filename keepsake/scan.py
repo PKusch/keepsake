@@ -153,6 +153,14 @@ DECEPTION = _rx(
     r"|\bsummari[sz]e only\b|\bif asked (?:about|what)\b[^\n]*\b(?:say|answer|reply)\b"
 )
 
+# "follow the instructions in ~/Downloads/AGENTS.md": memory that defers to
+# a file the person never approved, somewhere keepsake does not watch.
+EXTERNAL_INSTRUCTIONS = _rx(
+    r"\b(?:follow|obey|apply|load|use|read and follow|do what(?:ever)? (?:it|they) says?|take (?:your )?(?:instructions|orders))\b"
+    r"[^\n]{0,60}?\b(?:instructions?|rules?|guidance|setup|config(?:uration)?|playbook|notes?)\b[^\n]{0,40}?"
+    r"(?:~/|/(?:tmp|Users|home|var|etc|opt)/|\.\./|[A-Za-z]:\\\\)"
+)
+
 GUARDRAIL_ASK = _rx(r"\b(?:ask|asks|asking|confirm|confirms|confirmation|permission|approval|check with|checks with|sign-?off)\b")
 GUARDRAIL_STOP = _rx(r"\b(?:never|do not|don'?t|must not|mustn'?t|stop|refuse|only (?:with|after|when))\b")
 
@@ -245,6 +253,11 @@ def scan_added_line(text: str) -> list[Finding]:
     if m and CLAIMED_CONSENT_OBJECT.search(visible):
         out.append(_finding("claimed_consent", "high",
                             "claims the person already agreed to something risky", m.group(0)))
+
+    m = EXTERNAL_INSTRUCTIONS.search(visible)
+    if m:
+        out.append(_finding("external_instructions", "high",
+                            "tells the agent to take instructions from a file outside the project", m.group(0)))
 
     m = DECEPTION.search(visible)
     if m:

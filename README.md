@@ -88,7 +88,7 @@ Every change is shown for approval. The signals only decide how loud. An ordinar
 | Severity | What was found |
 |---|---|
 | critical | an instruction to run a program fetched from the internet; characters that are invisible when displayed |
-| high | removing a point where you would normally be asked, including a flag that switches prompts off; telling the agent to ignore earlier rules; sending something out of the machine; pointing the agent at passwords, keys or tokens; a key stored in memory; a memory file that is a link to somewhere outside the project; an instruction hidden in a comment; telling the agent to copy the rule into other memory; claiming you already agreed to something risky; telling the agent to mislead you; deleting a rule that made the agent ask first |
+| high | removing a point where you would normally be asked, including a flag that switches prompts off; telling the agent to ignore earlier rules; sending something out of the machine; pointing the agent at passwords, keys or tokens; a key stored in memory; a memory file that is a link to somewhere outside the project; an instruction hidden in a comment; telling the agent to copy the rule into other memory; telling the agent to take instructions from a file outside the project; claiming you already agreed to something risky; telling the agent to mislead you; deleting a rule that made the agent ask first |
 | moderate | a web or email address; text that is not readable as words; a rule that reaches beyond this project; a memory file appearing or disappearing; a memory file that is a link; deleting a rule that told the agent not to do something |
 | low | any other instruction to the agent |
 
