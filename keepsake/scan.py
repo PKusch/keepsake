@@ -93,6 +93,12 @@ EGRESS_VERB = _rx(
     r"beacon|call home|phone home|webhook|cc)\b"
 )
 EGRESS_TARGET = _rx(r"\b(?:webhook|endpoint|server|slack|discord|telegram|pastebin|gist|bucket|s3)\b")
+# Flags that switch off the prompts a tool would otherwise show the person.
+SKIP_FLAGS = _rx(
+    r"(?:--dangerously-skip-permissions|--no-verify|--yolo|--trust-all(?:-tools)?|--allow-all|--auto-approve|"
+    r"--non-interactive|--skip-(?:checks|confirm(?:ation)?|approval|hooks)|bypassPermissions|\bdefaultMode\b[^\n]*bypass)"
+)
+
 # "don't email them" is a limit, not an instruction to send something.
 NEGATED_EGRESS = _rx(r"\b(?:don'?t|do not|never|without|not)\s+(?:\w+\s+){0,2}?(?:send|post|upload|forward|email|mail|share|paste|publish|submit|sync)\w*\b")
 
@@ -179,7 +185,7 @@ def scan_added_line(text: str) -> list[Finding]:
         out.append(_finding("fetch_and_run", "critical",
                             "tells the agent to run a program fetched from the internet", m.group(0)))
 
-    m = CONSENT_ERODING.search(visible)
+    m = CONSENT_ERODING.search(visible) or SKIP_FLAGS.search(visible)
     if m:
         out.append(_finding("consent_eroding", "high",
                             "removes a point where the person would normally be asked", m.group(0)))

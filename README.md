@@ -10,7 +10,7 @@ Whatever is in those files steers every future session. keepsake makes a change 
 [![checks](https://github.com/PKusch/keepsake/actions/workflows/checks.yml/badge.svg)](https://github.com/PKusch/keepsake/actions/workflows/checks.yml)
 ![python](https://img.shields.io/badge/python-3.11%20%E2%80%93%203.14-3776AB?style=for-the-badge&logo=python&logoColor=white)
 ![dependencies](https://img.shields.io/badge/dependencies-none-2ea44f?style=for-the-badge)
-![tests](https://img.shields.io/badge/tests-47%20passing-2ea44f?style=for-the-badge)
+![tests](https://img.shields.io/badge/tests-55%20passing-2ea44f?style=for-the-badge)
 ![license](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)
 
 </div>
@@ -86,11 +86,11 @@ Every change is shown for approval. The signals only decide how loud. An ordinar
 | Severity | What was found |
 |---|---|
 | critical | an instruction to run a program fetched from the internet; characters that are invisible when displayed |
-| high | removing a point where you would normally be asked; telling the agent to ignore earlier rules; sending something out of the machine; pointing the agent at passwords, keys or tokens; a key stored in memory; an instruction hidden in a comment; telling the agent to copy the rule into other memory; claiming you already agreed to something risky; telling the agent to mislead you; deleting a rule that made the agent ask first |
-| moderate | a web or email address; text that is not readable as words; a rule that reaches beyond this project; a memory file appearing or disappearing; deleting a rule that told the agent not to do something |
+| high | removing a point where you would normally be asked, including a flag that switches prompts off; telling the agent to ignore earlier rules; sending something out of the machine; pointing the agent at passwords, keys or tokens; a key stored in memory; a memory file that is a link to somewhere outside the project; an instruction hidden in a comment; telling the agent to copy the rule into other memory; claiming you already agreed to something risky; telling the agent to mislead you; deleting a rule that made the agent ask first |
+| moderate | a web or email address; text that is not readable as words; a rule that reaches beyond this project; a memory file appearing or disappearing; a memory file that is a link; deleting a rule that told the agent not to do something |
 | low | any other instruction to the agent |
 
-Approving a `high` or `critical` change needs `--yes`. The corpus in `corpus/` holds 20 planted changes shaped like documented attacks on coding agents and 20 ordinary notes a person would want kept. On a fresh run, **19 of 20 planted** changes score `high` or `critical` (the twentieth, an encoded payload, scores `moderate` as expected) and **0 of 20 ordinary** notes rise above the level they are allowed. CI re-runs the corpus and fails if this paragraph drifts from the numbers.
+Approving a `high` or `critical` change needs `--yes`. The corpus in `corpus/` holds 21 planted changes shaped like documented attacks on coding agents and 21 ordinary notes a person would want kept. On a fresh run, **20 of 21 planted** changes score `high` or `critical` (the other, an encoded payload, scores `moderate` as expected) and **0 of 21 ordinary** notes rise above the level they are allowed. CI re-runs the corpus and fails if this paragraph drifts from the numbers.
 
 ## Limits
 
@@ -109,8 +109,8 @@ keepsake/report.py     approved versus live, line by line
 keepsake/store.py      .keepsake/: approved copies, held changes, rejected records
 keepsake/cli.py        init, check, approve, reject, pending, guard, hook
 keepsake/corpus.py     runs corpus/ and prints the numbers above
-corpus/                20 planted changes, 20 ordinary notes
-tests/                 47 tests
+corpus/                21 planted changes, 21 ordinary notes
+tests/                 55 tests
 ```
 
 Commit `.keepsake/` with the project. `pending/` is ignored; the approved copies, the rejected records and `decisions.log` (one line per yes or no, with `--note` if you gave one) are the history of what you agreed to.
