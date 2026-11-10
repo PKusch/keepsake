@@ -71,6 +71,10 @@ class Store:
     def include(self) -> list[str]:
         return list(self.config().get("include", DEFAULT_INCLUDE))
 
+    def exclude(self) -> set[str]:
+        """Folder names to skip on top of the built-in ones, from config.json."""
+        return set(self.config().get("exclude", []))
+
     def add_home(self) -> None:
         config = self.config()
         for pattern in HOME_INCLUDE:

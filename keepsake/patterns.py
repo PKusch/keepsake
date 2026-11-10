@@ -108,8 +108,9 @@ def matches(path: Path, pattern: str, root: Path) -> bool:
     return bool(regex.match(rel.as_posix()))
 
 
-def discover(root: Path, include: list[str]) -> list[Path]:
+def discover(root: Path, include: list[str], exclude: set[str] | None = None) -> list[Path]:
     """Every existing file named by the include patterns, as absolute paths."""
+    skip = EXCLUDE_DIRS | (exclude or set())
     found: set[Path] = set()
     for pattern in include:
         base = pattern_base(pattern) if is_absolute_pattern(pattern) else root / pattern_base(pattern)
@@ -120,7 +121,7 @@ def discover(root: Path, include: list[str]) -> list[Path]:
         if not base.is_dir():
             continue
         for dirpath, dirnames, filenames in os.walk(base):
-            dirnames[:] = [d for d in dirnames if d not in EXCLUDE_DIRS]
+            dirnames[:] = [d for d in dirnames if d not in skip]
             for name in filenames:
                 candidate = Path(dirpath) / name
                 if matches(candidate, pattern, root):

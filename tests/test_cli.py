@@ -182,6 +182,17 @@ class Flow(unittest.TestCase):
         self.assertEqual(run(*self.r, "approve")[0], 0)
         self.assertEqual(run(*self.r, "check")[0], 0)
 
+    def test_config_exclude_skips_a_folder(self):
+        run(*self.r, "init")
+        (self.root / "vendor").mkdir()
+        (self.root / "vendor" / "AGENTS.md").write_text("third-party notes\n")
+        self.assertEqual(run(*self.r, "check")[0], 1)
+        config_path = self.root / ".keepsake" / "config.json"
+        config = json.loads(config_path.read_text())
+        config["exclude"] = ["vendor"]
+        config_path.write_text(json.dumps(config))
+        self.assertEqual(run(*self.r, "check")[0], 0)
+
     def test_home_flag_adds_home_patterns(self):
         run(*self.r, "init", "--home")
         config = json.loads((self.root / ".keepsake" / "config.json").read_text())

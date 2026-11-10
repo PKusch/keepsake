@@ -116,7 +116,7 @@ def compare(approved: str | None, live: str | None) -> tuple[str, list[LineVerdi
 def check(store: Store) -> Report:
     """Every watched memory file, live against approved."""
     index = store.index()
-    live_paths = discover(store.root, store.include())
+    live_paths = discover(store.root, store.include(), store.exclude())
     live_by_key = {display_path(p, store.root): p for p in live_paths}
     keys = sorted(set(index) | set(live_by_key))
     files = []

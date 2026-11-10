@@ -44,7 +44,7 @@ def cmd_init(args) -> int:
     if args.home:
         store.add_home()
     files = {}
-    for path in discover(root, store.include()):
+    for path in discover(root, store.include(), store.exclude()):
         key = display_path(path, root)
         files[key] = store.approve(key, path.read_text("utf-8", errors="replace"))
     store.write_index(files)
