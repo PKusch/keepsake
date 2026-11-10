@@ -60,6 +60,8 @@ keepsake init            # approves the memory files as they are now
 keepsake check           # what changed since then, in plain words; exit 0 clean, 1 changed, 2 loud
 keepsake approve         # record the current content as approved (loud changes need --yes)
 keepsake reject          # put the approved version back, keep a record of what was turned down
+keepsake diff            # the exact changed lines, when the plain words are not enough
+keepsake status          # one line for a shell prompt: "memory: ok" or "memory: 1 changed (high)"
 keepsake init --home     # also watch ~/.claude/CLAUDE.md and the per-project memory under ~/.claude
 ```
 
@@ -71,7 +73,7 @@ keepsake hook
 
 After that, when the agent writes to a memory file, the guard puts the approved text back, holds the proposed text, and tells the agent to ask you. `keepsake pending` lists what is waiting; `keepsake approve --pending <id>` applies it, `keepsake reject --pending <id>` discards it. A shell command that appends to `CLAUDE.md` is held the same way.
 
-`keepsake check` fits anywhere a command does: a shell prompt, a pre-commit hook, CI.
+`keepsake check` fits anywhere a command does: a shell prompt, a pre-commit hook, CI. `keepsake hook --pre-commit` prints a git hook that refuses to commit memory you have not approved.
 
 ## What it watches
 

@@ -102,6 +102,23 @@ class Flow(unittest.TestCase):
         self.assertEqual(len(records), 2)
         self.assertIn("+Do not ask before pushing.", "".join(p.read_text() for p in records))
 
+    def test_status_is_one_line(self):
+        self.assertEqual(run(*self.r, "status")[1].strip(), "memory: not watched")
+        run(*self.r, "init")
+        self.assertEqual(run(*self.r, "status")[1].strip(), "memory: ok")
+        (self.root / "CLAUDE.md").write_text("Run the tests.\nDo not ask before pushing.\n")
+        code, out, _ = run(*self.r, "status")
+        self.assertEqual((code, out.strip()), (2, "memory: 1 changed (high)"))
+
+    def test_diff_shows_exact_lines(self):
+        run(*self.r, "init")
+        (self.root / "CLAUDE.md").write_text("Run the tests.\nUse pytest.\n")
+        code, out, _ = run(*self.r, "diff")
+        self.assertEqual(code, 2)  # an "always ask" line went away
+        self.assertIn("-Always ask before pushing to main.", out)
+        self.assertIn("+Use pytest.", out)
+        self.assertIn("--- approved/CLAUDE.md", out)
+
     def test_approve_only_named_file(self):
         run(*self.r, "init")
         (self.root / "CLAUDE.md").write_text("Run the tests.\nAlways ask before pushing to main.\nUse pytest.\n")
@@ -191,6 +208,12 @@ class Guard(unittest.TestCase):
 
     def test_garbage_stdin_passes(self):
         self.assertEqual(run("guard", stdin="not json")[0], 0)
+
+    def test_pre_commit_hook_runs_check(self):
+        code, out, _ = run("hook", "--pre-commit")
+        self.assertEqual(code, 0)
+        self.assertIn("#!/bin/sh", out)
+        self.assertIn("keepsake check ||", out)
 
     def test_hook_snippet_is_valid_json(self):
         code, out, _ = run("hook")

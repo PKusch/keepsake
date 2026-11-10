@@ -153,6 +153,38 @@ def cmd_reject(args) -> int:
     return EXIT_CLEAN
 
 
+def cmd_status(args) -> int:
+    """One line, for a shell prompt or a script."""
+    store = Store.find(_root(args))
+    if store is None:
+        print("memory: not watched")
+        return EXIT_CLEAN
+    report = check(store)
+    held = len(store.pending())
+    if not report.changed:
+        print("memory: ok" + (f", {held} held" if held else ""))
+        return EXIT_CLEAN
+    n = len(report.changed)
+    print(f"memory: {n} changed ({report.severity})" + (f", {held} held" if held else ""))
+    return EXIT_LOUD if rank(report.severity) >= rank(LOUD) else EXIT_CHANGED
+
+
+def cmd_diff(args) -> int:
+    """The exact lines, for when the plain-words report is not enough."""
+    store = _store_or_fail(args)
+    report = check(store)
+    targets = report.changed
+    if args.paths:
+        wanted = set(args.paths)
+        targets = [f for f in targets if f.path in wanted]
+    if not targets:
+        print("keepsake: nothing changed.")
+        return EXIT_CLEAN
+    for f in targets:
+        print(f.diff_text(), end="")
+    return EXIT_LOUD if rank(report.severity) >= rank(LOUD) else EXIT_CHANGED
+
+
 def cmd_pending(args) -> int:
     store = _store_or_fail(args)
     items = store.pending()
@@ -215,7 +247,17 @@ def cmd_guard(args) -> int:
     return EXIT_LOUD
 
 
+PRE_COMMIT = """#!/bin/sh
+# Refuse to commit memory the person has not approved.
+keepsake check || { echo "keepsake: approve or reject the memory change first." >&2; exit 1; }
+"""
+
+
 def cmd_hook(args) -> int:
+    if args.pre_commit:
+        print("Save this as .git/hooks/pre-commit and make it executable:\n")
+        print(PRE_COMMIT)
+        return EXIT_CLEAN
     snippet = {
         "hooks": {
             "PostToolUse": [
@@ -266,6 +308,13 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--pending", metavar="ID", help="discard a held change")
     s.set_defaults(func=cmd_reject)
 
+    s = sub.add_parser("status", help="one line: ok, or how many files changed and how loudly")
+    s.set_defaults(func=cmd_status)
+
+    s = sub.add_parser("diff", help="show the exact changed lines, as a diff")
+    s.add_argument("paths", nargs="*")
+    s.set_defaults(func=cmd_diff)
+
     s = sub.add_parser("pending", help="list changes held by the guard")
     s.set_defaults(func=cmd_pending)
 
@@ -273,6 +322,7 @@ def build_parser() -> argparse.ArgumentParser:
     s.set_defaults(func=cmd_guard)
 
     s = sub.add_parser("hook", help="print the Claude Code hook settings")
+    s.add_argument("--pre-commit", action="store_true", help="print a git pre-commit hook instead")
     s.set_defaults(func=cmd_hook)
     return p
 
