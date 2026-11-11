@@ -22,7 +22,7 @@ expected["tests"] = f"{tests} tests"  # the layout line "tests/   N tests", edit
 quoted = {int(n) for n in re.findall(r"\b(\d+) tests\b", readme)}
 bad = [k for k, phrase in expected.items() if phrase not in readme]
 if quoted - {tests}:
-    bad.append("tests")
+    bad = [k for k in bad if k != "tests"] + ["tests"]  # one message, not two
     expected["tests"] += f" (it also says {sorted(quoted - {tests})})"
 if bad:
     for k in bad:

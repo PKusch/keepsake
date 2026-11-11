@@ -95,7 +95,7 @@ def cmd_approve(args) -> int:
     report = check(store)
     targets = report.changed
     if args.paths:
-        wanted = set(args.paths)
+        wanted = {_key(store, p) for p in args.paths}
         targets = [f for f in targets if f.path in wanted]
         missing = wanted - {f.path for f in targets}
         for m in sorted(missing):
@@ -156,7 +156,7 @@ def cmd_reject(args) -> int:
     report = check(store)
     targets = report.changed
     if args.paths:
-        wanted = set(args.paths)
+        wanted = {_key(store, p) for p in args.paths}
         targets = [f for f in targets if f.path in wanted]
     if not targets:
         print("keepsake: nothing to reject.")
@@ -211,14 +211,27 @@ def cmd_history(args) -> int:
     return EXIT_CLEAN
 
 
+def _key(store: Store, arg: str) -> str:
+    """The name keepsake files a memory file under, for a path as typed:
+    ./CLAUDE.md, a full path, or ../CLAUDE.md from a subfolder. Those used to
+    match nothing, so diff said "nothing changed" about a changed file."""
+    if arg in store.index():
+        return arg
+    path = Path(os.path.expanduser(arg))
+    if not path.is_absolute():
+        path = Path.cwd() / path
+    return display_path(path, store.root)
+
+
 def cmd_show(args) -> int:
     """Print the approved version of one memory file."""
     store = _store_or_fail(args)
     index = store.index()
-    if args.path not in index:
+    key = _key(store, args.path)
+    if key not in index:
         print(f"keepsake: {args.path} has no approved version.", file=sys.stderr)
         return EXIT_ERROR
-    print(store.approved_content(index[args.path]) or "", end="")
+    print(store.approved_content(index[key]) or "", end="")
     return EXIT_CLEAN
 
 
@@ -228,7 +241,12 @@ def cmd_diff(args) -> int:
     report = check(store)
     targets = report.changed
     if args.paths:
-        wanted = set(args.paths)
+        wanted = {_key(store, p) for p in args.paths}
+        known = set(store.index()) | {f.path for f in report.files}
+        unknown = sorted(wanted - known)
+        if unknown:
+            print(f"keepsake: not a memory file keepsake watches: {', '.join(unknown)}", file=sys.stderr)
+            return EXIT_ERROR
         targets = [f for f in targets if f.path in wanted]
     if not targets:
         print("keepsake: nothing changed.")

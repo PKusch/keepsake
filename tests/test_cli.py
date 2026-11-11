@@ -249,6 +249,40 @@ class Flow(unittest.TestCase):
         self.assertIn("~/.claude/CLAUDE.md", config["include"])
 
 
+class PathsAsTyped(unittest.TestCase):
+    """./CLAUDE.md, a full path, or ../CLAUDE.md from a subfolder used to match
+    nothing: diff said "nothing changed", and approve and reject did nothing."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.root = Path(self.tmp.name).resolve()
+        (self.root / "sub").mkdir()
+        (self.root / "CLAUDE.md").write_text("be kind\n")
+        run("--root", str(self.root), "init")
+        (self.root / "CLAUDE.md").write_text("be kind\nask first\n")
+        self.here = os.getcwd()
+        os.chdir(self.root / "sub")
+
+    def tearDown(self):
+        os.chdir(self.here)
+        self.tmp.cleanup()
+
+    def test_diff_and_show_accept_paths_as_typed(self):
+        for arg in ("../CLAUDE.md", str(self.root / "CLAUDE.md")):
+            self.assertIn("+ask first", run("diff", arg)[1], arg)
+            self.assertEqual(run("show", arg)[1], "be kind\n", arg)
+        code, _, err = run("diff", "../NOTES.md")
+        self.assertEqual(code, 3)
+        self.assertIn("not a memory file keepsake watches", err)
+
+    def test_approve_and_reject_accept_paths_as_typed(self):
+        self.assertEqual(run("reject", "../CLAUDE.md")[0], 0)
+        self.assertEqual((self.root / "CLAUDE.md").read_text(), "be kind\n")
+        (self.root / "CLAUDE.md").write_text("be kind\nask first\n")
+        self.assertEqual(run("approve", "../CLAUDE.md")[0], 0)
+        self.assertEqual(run("show", "../CLAUDE.md")[1], "be kind\nask first\n")
+
+
 class ByteOrderMark(unittest.TestCase):
     def test_a_mark_at_the_start_is_not_a_change_but_one_inside_is_critical(self):
         from keepsake.report import compare
