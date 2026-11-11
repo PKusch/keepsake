@@ -18,7 +18,10 @@ DEFAULT_INCLUDE = [
     ".cursorrules",
     ".windsurfrules",
     ".clinerules",
+    ".clinerules/**",  # Cline also reads a folder of rule files
+    ".windsurf/rules/**",
     ".github/copilot-instructions.md",
+    ".github/instructions/**/*.instructions.md",  # Copilot's per-path instructions
     ".claude/**/*.md",
     ".cursor/rules/**",
     "memory/**/*.md",

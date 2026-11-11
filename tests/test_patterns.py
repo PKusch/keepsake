@@ -12,6 +12,13 @@ class Globs(unittest.TestCase):
             self.assertTrue(rx.match(p), p)
         self.assertFalse(rx.match("a/CLAUDE.md.bak"))
 
+    def test_rule_folders_that_agents_read_are_memory(self):
+        root = Path("/p")
+        for rel in (".clinerules/01-style.md", ".windsurf/rules/x.md",
+                    ".github/instructions/api.instructions.md", ".github/instructions/a/b.instructions.md"):
+            self.assertTrue(any(matches(root / rel, p, root) for p in DEFAULT_INCLUDE), rel)
+        self.assertFalse(any(matches(root / ".github/workflows/ci.yml", p, root) for p in DEFAULT_INCLUDE))
+
     def test_single_star_stays_in_one_segment(self):
         rx = glob_to_regex(".claude/*.md")
         self.assertTrue(rx.match(".claude/notes.md"))

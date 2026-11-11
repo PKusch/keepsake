@@ -79,7 +79,7 @@ After that, when the agent writes to a memory file, the guard puts the approved 
 
 ## What it watches
 
-`CLAUDE.md`, `CLAUDE.local.md`, `AGENTS.md`, `GEMINI.md` and `MEMORY.md` at any depth; `.cursorrules`, `.windsurfrules`, `.clinerules`; `.github/copilot-instructions.md`; everything under `.claude/` and `.cursor/rules/`; `memory/`. Edit `.keepsake/config.json` to change the list (`include` for patterns, `exclude` for folder names to skip on top of `node_modules`, `.git` and the usual build folders).
+`CLAUDE.md`, `CLAUDE.local.md`, `AGENTS.md`, `GEMINI.md` and `MEMORY.md` at any depth; `.cursorrules`, `.windsurfrules`, `.clinerules` (the file or the folder); `.windsurf/rules/`; `.github/copilot-instructions.md` and `.github/instructions/*.instructions.md`; everything under `.claude/` and `.cursor/rules/`; `memory/`. Edit `.keepsake/config.json` to change the list (`include` for patterns, `exclude` for folder names to skip on top of `node_modules`, `.git` and the usual build folders).
 
 ## How loud a change is
 
@@ -112,7 +112,7 @@ keepsake/store.py      .keepsake/: approved copies, held changes, rejected recor
 keepsake/cli.py        init, check, approve, reject, pending, guard, hook
 keepsake/corpus.py     runs corpus/ and prints the numbers above
 corpus/                21 planted changes, 21 ordinary notes
-tests/                 63 tests
+tests/                 64 tests
 ```
 
 Commit `.keepsake/` with the project. `pending/` is ignored; the approved copies, the rejected records and `decisions.log` (one line per yes or no, with `--note` if you gave one) are the history of what you agreed to.
