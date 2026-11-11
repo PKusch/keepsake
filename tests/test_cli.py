@@ -249,6 +249,24 @@ class Flow(unittest.TestCase):
         self.assertIn("~/.claude/CLAUDE.md", config["include"])
 
 
+class AsciiConsole(unittest.TestCase):
+    def test_check_reports_on_a_console_that_cannot_show_a_dash(self):
+        import subprocess
+        import sys
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            (root / "CLAUDE.md").write_text("be kind \u2014 always\n", encoding="utf-8")
+            run("--root", str(root), "init")
+            (root / "CLAUDE.md").write_text("be kind \u2014 always\nask first \u2014 never\n", encoding="utf-8")
+            env = dict(os.environ, LC_ALL="C", PYTHONUTF8="0", PYTHONCOERCECLOCALE="0", PYTHONIOENCODING="ascii",
+                       PYTHONPATH=str(Path(__file__).resolve().parents[1]))
+            r = subprocess.run([sys.executable, "-m", "keepsake", "--root", str(root), "check"],
+                               env=env, capture_output=True)
+            self.assertNotIn(b"Traceback", r.stderr)
+            self.assertEqual(r.returncode, 1)  # changed, and said so
+            self.assertIn(b"CLAUDE.md", r.stdout)
+
+
 class Guard(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()

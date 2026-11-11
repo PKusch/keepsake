@@ -403,6 +403,12 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
+    # Memory files quote dashes, accents and invisible characters. On a console
+    # that cannot show them (LC_ALL=C, a Windows code page) `check` crashed with
+    # exit 1, which reads as "memory changed".
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(errors="replace")
     args = build_parser().parse_args(argv)
     try:
         return args.func(args)
