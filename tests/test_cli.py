@@ -249,6 +249,15 @@ class Flow(unittest.TestCase):
         self.assertIn("~/.claude/CLAUDE.md", config["include"])
 
 
+class ByteOrderMark(unittest.TestCase):
+    def test_a_mark_at_the_start_is_not_a_change_but_one_inside_is_critical(self):
+        from keepsake.report import compare
+        self.assertEqual(compare("be kind\n", "\ufeffbe kind\n")[0], "unchanged")
+        status, verdicts, _ = compare("be kind\n", "be kind\nok\ufeffthen\n")
+        self.assertEqual(status, "changed")
+        self.assertEqual(max(v.severity for v in verdicts if v.findings), "critical")
+
+
 class AsciiConsole(unittest.TestCase):
     def test_check_reports_on_a_console_that_cannot_show_a_dash(self):
         import subprocess

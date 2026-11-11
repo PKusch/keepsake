@@ -74,6 +74,10 @@ class Report:
 def compare(approved: str | None, live: str | None) -> tuple[str, list[LineVerdict], list[Finding]]:
     """Line-level verdicts for one file, plus file-level findings."""
     file_findings: list[Finding] = []
+    # A byte-order mark at the very start is what Notepad adds when it saves;
+    # it is not hidden text. One anywhere else still is.
+    approved = approved[1:] if approved and approved.startswith("\ufeff") else approved
+    live = live[1:] if live and live.startswith("\ufeff") else live
     if approved is None and live is None:
         return "unchanged", [], []
     if approved is None:
