@@ -66,7 +66,10 @@ def glob_to_regex(pattern: str) -> re.Pattern[str]:
         else:
             out.append(re.escape(c))
             i += 1
-    return re.compile("^" + "".join(out) + "$")
+    # Ignore case: on a file system that ignores it (the macOS default) an agent
+    # writing claude.md changes the CLAUDE.md the next session reads, and that
+    # write slipped past the guard. Holding a claude.md on Linux too is harmless.
+    return re.compile("^" + "".join(out) + "$", re.IGNORECASE)
 
 
 def expand(pattern: str) -> str:
@@ -88,10 +91,25 @@ def pattern_base(pattern: str) -> Path:
     return Path(*base) if base else Path(".")
 
 
+def _on_disk_name(parent: Path, name: str) -> str:
+    """The file name as the folder spells it. Where the file system ignores
+    case, claude.md opens CLAUDE.md, and the approved copy is filed under the
+    folder's spelling, so the guard must find it by that name."""
+    try:
+        entries = os.listdir(parent)
+    except OSError:
+        return name
+    if name in entries:
+        return name
+    folded = [e for e in entries if e.casefold() == name.casefold()]
+    return folded[0] if len(folded) == 1 and (parent / name).exists() else name
+
+
 def canonical(path: Path) -> Path:
     """Resolve the folder, keep the file name: links in the file are kept visible."""
     path = Path(os.path.abspath(path))
-    return Path(os.path.realpath(path.parent)) / path.name
+    parent = Path(os.path.realpath(path.parent))
+    return parent / _on_disk_name(parent, path.name)
 
 
 def matches(path: Path, pattern: str, root: Path) -> bool:
