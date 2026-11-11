@@ -256,9 +256,14 @@ def cmd_guard(args) -> int:
     """Hook mode. Reads the tool call from stdin, holds any memory write."""
     try:
         payload = json.load(sys.stdin) if not sys.stdin.isatty() else {}
-    except json.JSONDecodeError:
-        return EXIT_CLEAN
-    tool_input = payload.get("tool_input") or {}
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        payload = {}
+    if not isinstance(payload, dict):
+        payload = {}
+    # A tool call that cannot be read names no file, so it is treated like a
+    # shell command: every memory file is checked. It used to exit 0 and let
+    # the write through, and a JSON list crashed the guard, which does the same.
+    tool_input = payload.get("tool_input") if isinstance(payload.get("tool_input"), dict) else {}
     file_path = tool_input.get("file_path") or tool_input.get("notebook_path") or tool_input.get("path")
     cwd = Path(payload.get("cwd") or os.getcwd())
     if file_path:

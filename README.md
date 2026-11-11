@@ -112,7 +112,7 @@ keepsake/store.py      .keepsake/: approved copies, held changes, rejected recor
 keepsake/cli.py        init, check, approve, reject, pending, guard, hook
 keepsake/corpus.py     runs corpus/ and prints the numbers above
 corpus/                21 planted changes, 21 ordinary notes
-tests/                 64 tests
+tests/                 65 tests
 ```
 
 Commit `.keepsake/` with the project. `pending/` is ignored; the approved copies, the rejected records and `decisions.log` (one line per yes or no, with `--note` if you gave one) are the history of what you agreed to.
