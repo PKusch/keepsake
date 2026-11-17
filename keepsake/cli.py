@@ -5,11 +5,12 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import sys
 from pathlib import Path
 
 from . import __version__
-from .patterns import discover, display_path
+from .patterns import canonical, discover, display_path
 from .report import check, check_one, render, render_file, summary_lines, to_json
 from .scan import rank, scan_text
 from .store import Store
@@ -270,6 +271,39 @@ def cmd_pending(args) -> int:
     return EXIT_CLEAN
 
 
+# An agent's shell must not approve its own memory change or rewrite the
+# records that say what was approved. A string match is not a wall (a script
+# can hide the words), so this raises the cost; check still verifies each
+# approved copy against its fingerprint.
+_SELF_APPROVAL = re.compile(r"\bkeepsake\s+(approve|init|reject)\b|\.keepsake\b")
+
+
+def _refuse_self_approval(payload: dict, tool_input: dict) -> int:
+    """PreToolUse: block, before it runs, a call that would approve memory or
+    change keepsake's records. Everything else goes ahead."""
+    reason = ""
+    command = tool_input.get("command")
+    if isinstance(command, str) and _SELF_APPROVAL.search(command):
+        reason = "it runs keepsake approve, init or reject, or touches .keepsake/"
+    file_path = tool_input.get("file_path") or tool_input.get("notebook_path") or tool_input.get("path")
+    if isinstance(file_path, str) and file_path:
+        cwd = Path(payload.get("cwd") or os.getcwd())
+        path = Path(file_path) if Path(file_path).is_absolute() else cwd / file_path
+        store = Store.find(cwd) or Store.find(path.parent)
+        if store is not None:
+            try:
+                canonical(path).relative_to(canonical(store.dir / "x").parent)
+                reason = "it writes into .keepsake/, where keepsake keeps what the person approved"
+            except ValueError:
+                pass
+    if not reason:
+        return EXIT_CLEAN
+    print(f"keepsake blocked this call: {reason}. Approving memory is the person's decision. "
+          "Tell them what you wanted to change and ask them to run `keepsake approve` themselves.",
+          file=sys.stderr)
+    return EXIT_LOUD
+
+
 def cmd_guard(args) -> int:
     """Hook mode. Reads the tool call from stdin, holds any memory write."""
     try:
@@ -282,6 +316,8 @@ def cmd_guard(args) -> int:
     # shell command: every memory file is checked. It used to exit 0 and let
     # the write through, and a JSON list crashed the guard, which does the same.
     tool_input = payload.get("tool_input") if isinstance(payload.get("tool_input"), dict) else {}
+    if payload.get("hook_event_name") == "PreToolUse":
+        return _refuse_self_approval(payload, tool_input)
     file_path = tool_input.get("file_path") or tool_input.get("notebook_path") or tool_input.get("path")
     cwd = Path(payload.get("cwd") or os.getcwd())
     if file_path:
@@ -336,16 +372,13 @@ def cmd_hook(args) -> int:
         print("Save this as .git/hooks/pre-commit and make it executable:\n")
         print(PRE_COMMIT)
         return EXIT_CLEAN
-    snippet = {
-        "hooks": {
-            "PostToolUse": [
-                {
-                    "matcher": "Write|Edit|MultiEdit|NotebookEdit|Bash",
-                    "hooks": [{"type": "command", "command": "keepsake guard"}],
-                }
-            ]
-        }
+    entry = {
+        "matcher": "Write|Edit|MultiEdit|NotebookEdit|Bash",
+        "hooks": [{"type": "command", "command": "keepsake guard"}],
     }
+    # PreToolUse blocks a call that would approve memory or edit .keepsake/
+    # before it runs; PostToolUse holds a memory write after it lands.
+    snippet = {"hooks": {"PreToolUse": [entry], "PostToolUse": [dict(entry)]}}
     print("Add this to .claude/settings.json (merge with what is there):\n")
     print(json.dumps(snippet, indent=2))
     print("\nAfter that, every write an agent makes to a memory file is held until you approve it.")

@@ -75,6 +75,8 @@ keepsake hook
 
 After that, when the agent writes to a memory file, the guard puts the approved text back, holds the proposed text, and tells the agent to ask you. `keepsake pending` lists what is waiting; `keepsake approve --pending <id>` applies it, `keepsake reject --pending <id>` discards it. A shell command that appends to `CLAUDE.md` is held the same way.
 
+The settings also run the guard *before* each call. It refuses a call that would let the agent approve its own change: running `keepsake approve`, `init` or `reject`, or writing into `.keepsake/`, where the approved copies are kept. If you added the hook before 17 November 2026, print it again and add the `PreToolUse` part.
+
 `keepsake check` fits anywhere a command does: a shell prompt, a pre-commit hook, CI. `keepsake hook --pre-commit` prints a git hook that refuses to commit memory you have not approved.
 
 ## What it watches
@@ -99,7 +101,8 @@ Approving a `high` or `critical` change needs `--yes`. The corpus in `corpus/` h
 - **The vocabulary is finite.** A harmful instruction worded outside it scores `low`. It is still shown to you for approval, which is the floor: nothing counts as memory until you have seen it. Treat the severities as a reading aid, not a verdict.
 - **The corpus was written by the same hand as the scanner.** Twenty examples of each kind is enough to pin behaviour, not enough to claim a detection rate in the wild.
 - **It watches files.** Memory an agent keeps in a database or a vendor's cloud is not covered.
-- **The hook works where hooks work.** It is written for Claude Code's `PostToolUse` event. Other agents can call `keepsake guard` with the same JSON on stdin, or run `keepsake check` before each session.
+- **An agent with a shell can still rewrite `.keepsake/`.** The before-call check matches words, so a script that hides them gets past it. What it cannot hide: every approved copy is checked against its fingerprint, so a copy changed in place is reported as critical. Commit `.keepsake/` so git shows any other change to it.
+- **The hook works where hooks work.** It is written for Claude Code's `PreToolUse` and `PostToolUse` events. Other agents can call `keepsake guard` with the same JSON on stdin, or run `keepsake check` before each session.
 - **Rejecting a change is not undoing it.** `reject` restores the file and keeps the diff under `.keepsake/rejected/`; it does not know what the agent did because of the change in the meantime.
 
 ## Layout
@@ -112,7 +115,7 @@ keepsake/store.py      .keepsake/: approved copies, held changes, rejected recor
 keepsake/cli.py        init, check, approve, reject, pending, guard, hook
 keepsake/corpus.py     runs corpus/ and prints the numbers above
 corpus/                21 planted changes, 21 ordinary notes
-tests/                 70 tests
+tests/                 72 tests
 ```
 
 Commit `.keepsake/` with the project. `pending/` is ignored; the approved copies, the rejected records and `decisions.log` (one line per yes or no, with `--note` if you gave one) are the history of what you agreed to.

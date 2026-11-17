@@ -366,6 +366,28 @@ class Guard(unittest.TestCase):
         self.assertEqual(code, 2, err)
         self.assertNotIn("evil.example", (self.root / "CLAUDE.md").read_text() if (self.root / "CLAUDE.md").exists() else "")
 
+    def pre(self, **tool_input):
+        payload = {"cwd": str(self.root), "hook_event_name": "PreToolUse",
+                   "tool_name": "Bash" if "command" in tool_input else "Write", "tool_input": tool_input}
+        return run("guard", stdin=json.dumps(payload))
+
+    def test_before_a_call_the_agent_cannot_approve_or_edit_keepsakes_records(self):
+        for tool_input in ({"command": "keepsake approve --yes"},
+                           {"command": "cd x && keepsake  init --force"},
+                           {"command": "python -m keepsake reject"},
+                           {"command": "cp CLAUDE.md .keepsake/approved/abc"},
+                           {"file_path": str(self.root / ".keepsake" / "index.json")},
+                           {"file_path": ".keepsake/approved/abc"}):
+            code, _, err = self.pre(**tool_input)
+            self.assertEqual(code, 2, tool_input)
+            self.assertIn("Approving memory is the person's decision", err)
+
+    def test_before_a_call_ordinary_work_goes_ahead(self):
+        for tool_input in ({"command": "keepsake check"}, {"command": "pytest -q"},
+                           {"file_path": str(self.root / "CLAUDE.md")}, {"file_path": str(self.root / "app.py")}):
+            self.assertEqual(self.pre(**tool_input)[0], 0, tool_input)
+        self.assertIn("PreToolUse", run("hook")[1])
+
     def test_new_memory_file_is_held_and_removed(self):
         (self.root / "AGENTS.md").write_text("planted\n")
         code, _, _ = self.hook(self.root / "AGENTS.md")
