@@ -45,6 +45,7 @@ def cmd_init(args) -> int:
     if args.home:
         store.add_home()
     files = {}
+    worst: dict[str, str] = {}
     loud: dict[str, list[str]] = {}
     for path in discover(root, store.include(), store.exclude()):
         key = display_path(path, root)
@@ -57,7 +58,11 @@ def cmd_init(args) -> int:
         ]
         if reasons:
             loud[key] = reasons
+        worst[key] = max((f.severity for v in scan_text(text) for f in v.findings), key=rank, default="none")
     store.write_index(files)
+    # init is the first and often largest yes, so history starts with it.
+    for key in sorted(files):
+        store.log_approval(key, worst[key], source="init")
     print(f"keepsake: approved {len(files)} memory file{'s' if len(files) != 1 else ''} as they are now.")
     for key in sorted(files):
         print(f"  {key}")
@@ -232,7 +237,8 @@ def cmd_history(args) -> int:
             continue
         when, what, key, severity, source = parts[:5]
         note = parts[5] if len(parts) > 5 and parts[5] else ""
-        print(f"{when}  {what:<8} {key}  ({severity})" + (f"  {note}" if note else ""))
+        how = "  at init" if source == "init" else ""
+        print(f"{when}  {what:<8} {key}  ({severity}){how}" + (f"  {note}" if note else ""))
     return EXIT_CLEAN
 
 

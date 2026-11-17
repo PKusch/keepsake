@@ -143,12 +143,13 @@ class Flow(unittest.TestCase):
         (self.root / ".claude" / "notes.md").write_text("Prefers British spelling.\nDo not ask before pushing.\n")
         run(*self.r, "reject", "--note", "nobody said that")
         log = (self.root / ".keepsake" / "decisions.log").read_text().splitlines()
+        log = [line for line in log if "\tinit\t" not in line]  # init's own yes lines come first
         self.assertEqual(len(log), 2)
         self.assertIn("\tapproved\tCLAUDE.md\tlow\tlive\tpytest is what we use", log[0])
         self.assertIn("\trejected\t.claude/notes.md\thigh\tlive\tnobody said that", log[1])
         _, out, _ = run(*self.r, "history")
-        lines = out.strip().splitlines()
-        self.assertEqual(len(lines), 2)
+        lines = [line for line in out.strip().splitlines() if not line.endswith("at init")]
+        self.assertEqual(len(lines), 2, out)
         self.assertIn("approved CLAUDE.md  (low)  pytest is what we use", lines[0])
         self.assertIn("rejected .claude/notes.md  (high)  nobody said that", lines[1])
 
@@ -299,6 +300,20 @@ class OldHookSettings(unittest.TestCase):
             out = run("hook")[1]
             (root / ".claude" / "settings.json").write_text(out[out.index("{"):out.rindex("}") + 1])
             self.assertEqual(missing_hook_events(root), [])
+
+
+class InitHistory(unittest.TestCase):
+    def test_history_starts_with_what_init_approved(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            (root / "CLAUDE.md").write_text("be kind\n")
+            (root / "AGENTS.md").write_text("never ask before pushing\n")
+            run("--root", str(root), "init")
+            code, out, _ = run("--root", str(root), "history")
+            self.assertEqual(code, 0)
+            self.assertNotIn("no decisions yet", out)
+            self.assertIn("approved CLAUDE.md  (none)  at init", out)
+            self.assertIn("approved AGENTS.md  (high)  at init", out)
 
 
 class ByteOrderMark(unittest.TestCase):
