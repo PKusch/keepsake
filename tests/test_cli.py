@@ -283,6 +283,24 @@ class PathsAsTyped(unittest.TestCase):
         self.assertEqual(run("show", "../CLAUDE.md")[1], "be kind\nask first\n")
 
 
+class OldHookSettings(unittest.TestCase):
+    def test_check_says_when_the_hook_misses_events_and_not_when_it_has_them(self):
+        from keepsake.cli import missing_hook_events
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            (root / "CLAUDE.md").write_text("be kind\n")
+            run("--root", str(root), "init")
+            self.assertEqual(missing_hook_events(root), [])  # no hook at all: nothing to nag about
+            (root / ".claude").mkdir()
+            old = {"hooks": {"PostToolUse": [{"matcher": "Write", "hooks": [{"type": "command", "command": "keepsake guard"}]}]}}
+            (root / ".claude" / "settings.json").write_text(json.dumps(old))
+            self.assertEqual(missing_hook_events(root), ["SessionStart", "PreToolUse"])
+            self.assertIn("not set for SessionStart, PreToolUse", run("--root", str(root), "check")[2])
+            out = run("hook")[1]
+            (root / ".claude" / "settings.json").write_text(out[out.index("{"):out.rindex("}") + 1])
+            self.assertEqual(missing_hook_events(root), [])
+
+
 class ByteOrderMark(unittest.TestCase):
     def test_a_mark_at_the_start_is_not_a_change_but_one_inside_is_critical(self):
         from keepsake.report import compare

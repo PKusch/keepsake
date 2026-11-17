@@ -72,8 +72,32 @@ def cmd_init(args) -> int:
     return EXIT_CLEAN
 
 
+HOOK_EVENTS = ("SessionStart", "PreToolUse", "PostToolUse")
+
+
+def missing_hook_events(root: Path) -> list[str]:
+    """Events the keepsake guard is not wired to, when it is wired to some.
+    Settings written before 17 November 2026 have PostToolUse only, so they
+    miss the session-start hold and the block on self-approval, silently."""
+    wired: set[str] = set()
+    for name in ("settings.json", "settings.local.json"):
+        path = root / ".claude" / name
+        try:
+            hooks = json.loads(path.read_text("utf-8")).get("hooks", {})
+        except (OSError, ValueError, AttributeError):
+            continue
+        for event, groups in (hooks.items() if isinstance(hooks, dict) else []):
+            if "keepsake guard" in json.dumps(groups):
+                wired.add(event)
+    return [e for e in HOOK_EVENTS if e not in wired] if wired else []
+
+
 def cmd_check(args) -> int:
     store = _store_or_fail(args)
+    missing = missing_hook_events(store.root)
+    if missing and not args.json:
+        print(f"keepsake: the hook is not set for {', '.join(missing)}; run `keepsake hook` and add the missing parts.",
+              file=sys.stderr)
     report = check(store)
     if args.json:
         payload = to_json(report)
