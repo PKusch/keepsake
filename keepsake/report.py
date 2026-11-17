@@ -121,6 +121,24 @@ def compare(approved: str | None, live: str | None) -> tuple[str, list[LineVerdi
     return "changed", verdicts, file_findings
 
 
+TAMPERED = Finding(
+    "tampered", "critical",
+    "keepsake's approved copy of this file was changed outside keepsake, so it no longer shows what "
+    "the person agreed to; it is not trusted as approved", "")
+
+
+def approved_for(store: Store, key: str, index: dict[str, str]) -> tuple[str | None, list[Finding]]:
+    """The approved text of one file, checked against its fingerprint. An agent
+    that overwrote the approved copy along with the file used to make its own
+    change look approved."""
+    if key not in index:
+        return None, []
+    content = store.approved_content(index[key])
+    if content is not None and sha256(content) != index[key]:
+        return None, [TAMPERED]
+    return content, []
+
+
 def check(store: Store) -> Report:
     """Every watched memory file, live against approved."""
     index = store.index()
@@ -129,9 +147,10 @@ def check(store: Store) -> Report:
     keys = sorted(set(index) | set(live_by_key))
     files = []
     for key in keys:
-        approved = store.approved_content(index[key]) if key in index else None
+        approved, tamper = approved_for(store, key, index)
         live = live_by_key[key].read_text("utf-8", errors="replace") if key in live_by_key else None
         status, verdicts, file_findings = compare(approved, live)
+        file_findings = tamper + file_findings
         if key in live_by_key:
             file_findings = file_findings + link_findings(live_by_key[key], store.root)
             if status == "unchanged" and file_findings:
@@ -161,9 +180,10 @@ def check_one(store: Store, path: Path) -> FileReport | None:
         return None
     key = display_path(path, store.root)
     index = store.index()
-    approved = store.approved_content(index[key]) if key in index else None
+    approved, tamper = approved_for(store, key, index)
     live = path.read_text("utf-8", errors="replace") if path.is_file() else None
     status, verdicts, file_findings = compare(approved, live)
+    file_findings = tamper + file_findings
     file_findings = file_findings + link_findings(path, store.root)
     if status == "unchanged" and file_findings:
         status = "changed"
