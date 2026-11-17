@@ -127,6 +127,12 @@ TAMPERED = Finding(
     "the person agreed to; it is not trusted as approved", "")
 
 
+MISSING = Finding(
+    "approved_missing", "critical",
+    "keepsake's approved copy of this file is gone, so what the person agreed to cannot be shown; "
+    "it is not trusted as approved", "")
+
+
 def approved_for(store: Store, key: str, index: dict[str, str]) -> tuple[str | None, list[Finding]]:
     """The approved text of one file, checked against its fingerprint. An agent
     that overwrote the approved copy along with the file used to make its own
@@ -134,7 +140,11 @@ def approved_for(store: Store, key: str, index: dict[str, str]) -> tuple[str | N
     if key not in index:
         return None, []
     content = store.approved_content(index[key])
-    if content is not None and sha256(content) != index[key]:
+    if content is None:
+        # Deleted rather than overwritten: it was approved, so "never approved,
+        # has appeared" (moderate) would understate it.
+        return None, [MISSING]
+    if sha256(content) != index[key]:
         return None, [TAMPERED]
     return content, []
 
@@ -150,7 +160,7 @@ def check(store: Store) -> Report:
         approved, tamper = approved_for(store, key, index)
         live = live_by_key[key].read_text("utf-8", errors="replace") if key in live_by_key else None
         status, verdicts, file_findings = compare(approved, live)
-        file_findings = tamper + file_findings
+        file_findings = tamper + [x for x in file_findings if not (tamper and x.signal == "new_file")]
         if key in live_by_key:
             file_findings = file_findings + link_findings(live_by_key[key], store.root)
             if status == "unchanged" and file_findings:
@@ -183,7 +193,7 @@ def check_one(store: Store, path: Path) -> FileReport | None:
     approved, tamper = approved_for(store, key, index)
     live = path.read_text("utf-8", errors="replace") if path.is_file() else None
     status, verdicts, file_findings = compare(approved, live)
-    file_findings = tamper + file_findings
+    file_findings = tamper + [x for x in file_findings if not (tamper and x.signal == "new_file")]
     file_findings = file_findings + link_findings(path, store.root)
     if status == "unchanged" and file_findings:
         status = "changed"
