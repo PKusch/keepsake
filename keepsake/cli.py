@@ -348,6 +348,16 @@ def cmd_guard(args) -> int:
         held.append((f, item))
     if not held:
         return EXIT_CLEAN
+    if payload.get("hook_event_name") == "SessionStart":
+        # Not the agent's write: memory that changed between sessions, such as
+        # a planted AGENTS.md arriving with git pull. Claude Code adds a
+        # SessionStart hook's stdout to the session, so the agent can say so.
+        names = ", ".join(f"{f.path} ({f.severity})" for f, _ in held)
+        print(f"keepsake held {len(held)} memory change{'s' if len(held) != 1 else ''} made outside this "
+              f"session since the person last approved: {names}. They are not in effect: the files say what "
+              "the person approved. Tell the person at the start of your reply, and that `keepsake pending` "
+              "shows what is waiting.")
+        return EXIT_CLEAN
     for f, item in held:
         why = "; ".join(item.summary[:3])
         print(
@@ -378,7 +388,10 @@ def cmd_hook(args) -> int:
     }
     # PreToolUse blocks a call that would approve memory or edit .keepsake/
     # before it runs; PostToolUse holds a memory write after it lands.
-    snippet = {"hooks": {"PreToolUse": [entry], "PostToolUse": [dict(entry)]}}
+    # SessionStart holds memory that changed between sessions (a git pull, a
+    # hand edit, another tool) before the agent reads it.
+    snippet = {"hooks": {"SessionStart": [{"hooks": [{"type": "command", "command": "keepsake guard"}]}],
+                         "PreToolUse": [entry], "PostToolUse": [dict(entry)]}}
     print("Add this to .claude/settings.json (merge with what is there):\n")
     print(json.dumps(snippet, indent=2))
     print("\nAfter that, every write an agent makes to a memory file is held until you approve it.")

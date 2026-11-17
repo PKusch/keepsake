@@ -75,7 +75,7 @@ keepsake hook
 
 After that, when the agent writes to a memory file, the guard puts the approved text back, holds the proposed text, and tells the agent to ask you. `keepsake pending` lists what is waiting; `keepsake approve --pending <id>` applies it, `keepsake reject --pending <id>` discards it. A shell command that appends to `CLAUDE.md` is held the same way.
 
-The settings also run the guard *before* each call. It refuses a call that would let the agent approve its own change: running `keepsake approve`, `init` or `reject`, or writing into `.keepsake/`, where the approved copies are kept. If you added the hook before 17 November 2026, print it again and add the `PreToolUse` part.
+The settings also run the guard *before* each call. It refuses a call that would let the agent approve its own change: running `keepsake approve`, `init` or `reject`, or writing into `.keepsake/`, where the approved copies are kept. It also runs when a session starts, and holds memory that changed since you last approved by any other route: a hand edit, another tool, or a planted `AGENTS.md` that arrived with `git pull`. The agent is told what was held so it can tell you. If you added the hook before 17 November 2026, print it again and add the `SessionStart` and `PreToolUse` parts.
 
 `keepsake check` fits anywhere a command does: a shell prompt, a pre-commit hook, CI. `keepsake hook --pre-commit` prints a git hook that refuses to commit memory you have not approved.
 
@@ -115,7 +115,7 @@ keepsake/store.py      .keepsake/: approved copies, held changes, rejected recor
 keepsake/cli.py        init, check, approve, reject, pending, guard, hook
 keepsake/corpus.py     runs corpus/ and prints the numbers above
 corpus/                21 planted changes, 21 ordinary notes
-tests/                 72 tests
+tests/                 73 tests
 ```
 
 Commit `.keepsake/` with the project. `pending/` is ignored; the approved copies, the rejected records and `decisions.log` (one line per yes or no, with `--note` if you gave one) are the history of what you agreed to.
